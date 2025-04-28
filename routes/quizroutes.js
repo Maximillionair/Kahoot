@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const quizController = require('../controllers/quizqontroller');
+const quizController = require('../controllers/quizcontroller');
 
 // Apply authentication middleware to all quiz routes
 router.use(quizController.isAuthenticated);

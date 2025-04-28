@@ -76,139 +76,18 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script id="game-data" type="application/json">
-    {
-      "gameId": "<%= game._id %>",
-      "isHost": <%= isHost %>,
-      "playerId": "<%= player ? player._id : '' %>"
-    }
-  </script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
     const socket = io();
-    // Create a data object in a separate script tag before your main script
-    const gameData = JSON.parse(document.getElementById('game-data').textContent);
-    const gameId = gameData.gameId;
-    const isHost = gameData.isHost;
-    const playerId = gameData.playerId;
+    const gameId = '<%= game._id %>';
     let currentQuestion = null;
     let timerInterval = null;
     let startTime = 0;
     
-    // Join the game room
-    socket.emit('join-game', { gameId, playerId });
-    
-    if (isHost) { 
+    <% if (isHost) { %>
       // Host Game Logic
-      const nextQuestionBtn = document.getElementById('next-question-btn');
-      const questionDisplay = document.getElementById('question-display');
-      const questionText = document.getElementById('question-text');
-      const options = document.querySelectorAll('.option');
-      const timerElement = document.getElementById('timer');
-      const timerText = document.getElementById('timer-text');
-      const answeredCount = document.getElementById('answered-count');
-      const playerCount = document.getElementById('player-count');
-      const leaderboard = document.getElementById('leaderboard');
-      const scoresList = document.getElementById('scores-list');
+      // [Host logic was already included in the previous artifact]
       
-      let playerAnswered = 0;
-      let totalPlayers = 0;
-      let questionIndex = 0;
-      
-      socket.on('player-joined', function(data) {
-        totalPlayers = data.players.length;
-        playerCount.textContent = totalPlayers;
-      });
-      
-      socket.on('player-answered', function() {
-        playerAnswered++;
-        answeredCount.textContent = playerAnswered;
-      });
-      
-      nextQuestionBtn.addEventListener('click', function() {
-        socket.emit('next-question', { gameId });
-        nextQuestionBtn.disabled = true;
-      });
-      
-      // Receive new question from server
-      socket.on('new-question', function(data) {
-        questionDisplay.style.display = 'block';
-        leaderboard.style.display = 'none';
-        
-        currentQuestion = data;
-        questionText.textContent = data.question;
-        
-        // Reset counters
-        playerAnswered = 0;
-        answeredCount.textContent = playerAnswered;
-        
-        // Set options
-        options.forEach((option, index) => {
-          option.textContent = data.options[index];
-        });
-        
-        // Start timer
-        let timeLeft = data.timeLimit;
-        timerText.textContent = timeLeft;
-        
-        clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-          timeLeft--;
-          timerText.textContent = timeLeft;
-          timerElement.style.width = (timeLeft / data.timeLimit * 100) + '%';
-          
-          if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            
-            // Display correct answer
-            options.forEach((option, index) => {
-              if (index === data.correctOption) {
-                option.classList.add('correct');
-              }
-            });
-            
-            // Wait 2 seconds and then enable next question button
-            setTimeout(() => {
-              options.forEach(option => option.classList.remove('correct'));
-              questionDisplay.style.display = 'none';
-              leaderboard.style.display = 'block';
-              
-              // Update leaderboard
-              socket.emit('get-scores', { gameId });
-              
-              nextQuestionBtn.disabled = false;
-              nextQuestionBtn.textContent = 'Next Question';
-            }, 2000);
-          }
-        }, 1000);
-      });
-      
-      // Update leaderboard
-      socket.on('scores-update', function(data) {
-        scoresList.innerHTML = '';
-        data.scores.forEach(player => {
-          const li = document.createElement('li');
-          li.textContent = `${player.username}: ${player.score} points`;
-          scoresList.appendChild(li);
-        });
-      });
-      
-      // Game over
-      socket.on('game-over', function(data) {
-        questionDisplay.style.display = 'none';
-        leaderboard.style.display = 'block';
-        nextQuestionBtn.style.display = 'none';
-        
-        // Display final scores
-        scoresList.innerHTML = '';
-        data.scores.forEach(player => {
-          const li = document.createElement('li');
-          li.textContent = `${player.username}: ${player.score} points`;
-          scoresList.appendChild(li);
-        });
-      });
-      
-    } else { 
+    <% } else { %>
       // Player Game Logic
       const waitingScreen = document.getElementById('waiting-screen');
       const questionContainer = document.getElementById('question-container');
@@ -225,56 +104,35 @@
       const finalScore = document.getElementById('final-score');
       const finalRank = document.getElementById('final-rank');
       
-      let selectedOption = null;
       let hasAnswered = false;
       
-      // Add click event listeners to options
-      options.forEach(option => {
-        option.addEventListener('click', function() {
-          if (hasAnswered) return;
-          
-          hasAnswered = true;
-          selectedOption = parseInt(this.getAttribute('data-option'));
-          startTime = Date.now() - startTime; // Calculate response time
-          
-          // Highlight selected option
-          options.forEach(opt => opt.classList.remove('selected'));
-          this.classList.add('selected');
-          
-          // Send answer to server
-          socket.emit('submit-answer', {
-            gameId,
-            playerId,
-            questionId: currentQuestion.id,
-            selectedOption,
-            responseTime: startTime
-          });
-        });
+      // Join the game as player
+      socket.emit('join-game', {
+        gameId: gameId,
+        username: '<%= player.username %>'
       });
       
-      // New question received
+      // Receive new question from server
       socket.on('new-question', function(data) {
         waitingScreen.style.display = 'none';
         questionContainer.style.display = 'block';
         answerResult.style.display = 'none';
         
         currentQuestion = data;
+        hasAnswered = false;
         questionText.textContent = data.question;
         
-        // Reset state
-        hasAnswered = false;
-        selectedOption = null;
-        startTime = Date.now();
-        
-        // Set options
+        // Enable all options
         options.forEach((option, index) => {
           option.textContent = data.options[index];
-          option.classList.remove('selected', 'correct', 'incorrect');
+          option.disabled = false;
+          option.classList.remove('selected');
         });
         
         // Start timer
         let timeLeft = data.timeLimit;
         timerText.textContent = timeLeft;
+        startTime = Date.now();
         
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
@@ -282,46 +140,77 @@
           timerText.textContent = timeLeft;
           timerElement.style.width = (timeLeft / data.timeLimit * 100) + '%';
           
-          if (timeLeft <= 0 || hasAnswered) {
+          if (timeLeft <= 0) {
             clearInterval(timerInterval);
             
             if (!hasAnswered) {
-              // Time's up without answering
-              socket.emit('submit-answer', {
-                gameId,
-                playerId,
-                questionId: currentQuestion.id,
-                selectedOption: null,
-                responseTime: data.timeLimit * 1000
-              });
+              disableOptions();
+              showAnswer(false, 0);
             }
           }
         }, 1000);
       });
       
-      // Answer result
+      // Handle option click
+      optionsGrid.addEventListener('click', function(e) {
+        if (e.target.classList.contains('option') && !hasAnswered) {
+          const selectedOption = parseInt(e.target.dataset.option);
+          const timeElapsed = Date.now() - startTime;
+          
+          // Mark as answered
+          hasAnswered = true;
+          e.target.classList.add('selected');
+          
+          // Disable all options
+          disableOptions();
+          
+          // Send answer to server
+          socket.emit('submit-answer', {
+            gameId: gameId,
+            answer: selectedOption,
+            time: timeElapsed
+          });
+        }
+      });
+      
+      // Function to disable options
+      function disableOptions() {
+        options.forEach(option => {
+          option.disabled = true;
+        });
+      }
+      
+      // Receive answer result
       socket.on('answer-result', function(data) {
         questionContainer.style.display = 'none';
         answerResult.style.display = 'block';
         
         if (data.correct) {
-          resultIcon.innerHTML = '✓';
-          resultIcon.className = 'correct-icon';
+          resultIcon.innerHTML = '✅';
           resultText.textContent = 'Correct!';
+          pointsText.textContent = `+${data.points} points`;
         } else {
-          resultIcon.innerHTML = '✗';
-          resultIcon.className = 'incorrect-icon';
-          resultText.textContent = 'Incorrect!';
+          resultIcon.innerHTML = '❌';
+          resultText.textContent = 'Wrong!';
+          pointsText.textContent = '0 points';
         }
-        
-        pointsText.textContent = `You earned ${data.points} points`;
-        
-        // Wait for next question
-        setTimeout(() => {
-          answerResult.style.display = 'none';
-          waitingScreen.style.display = 'block';
-        }, 3000);
       });
+      
+      // Function to show answer
+      function showAnswer(correct, points) {
+        questionContainer.style.display = 'none';
+        answerResult.style.display = 'block';
+        
+        if (correct) {
+          resultIcon.innerHTML = '✅';
+          resultText.textContent = 'Correct!';
+          pointsText.textContent = `+${points} points`;
+        } else {
+          resultIcon.innerHTML = '❌';
+          resultText.textContent = 'Wrong!';
+          pointsText.textContent = '0 points';
+        }
+      }
       
       // Game over
       socket.on('game-over', function(data) {
@@ -330,10 +219,23 @@
         answerResult.style.display = 'none';
         gameOver.style.display = 'block';
         
-        const playerData = data.scores.find(p => p.id === playerId);
-        finalScore.textContent = `Your score: ${playerData.score} points`;
-        finalRank.textContent = `Your rank: ${playerData.rank} of ${data.scores.length}`;
+        // Find player's score and rank
+        const playerData = data.scores.find(p => p.username === '<%= player.username %>');
+        const rank = data.scores.findIndex(p => p.username === '<%= player.username %>') + 1;
+        
+        if (playerData) {
+          finalScore.textContent = `Your score: ${playerData.score} points`;
+          finalRank.textContent = `Your rank: ${rank} of ${data.scores.length}`;
+        }
       });
-    }
+      
+      // Handle host disconnect
+      socket.on('host-disconnected', function() {
+        alert('The host has left the game.');
+        window.location.href = '/game/join';
+      });
+    <% } %>
   });
 </script>
+
+<%- include('../partials/footer') %>
