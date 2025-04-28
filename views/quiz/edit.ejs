@@ -1,0 +1,178 @@
+<%- include('../partials/header') %>
+
+<div class="quiz-form">
+  <h1>Edit Quiz</h1>
+  
+  <form action="/quiz/edit/<%= quiz._id %>?_method=PUT" method="POST" id="editQuizForm">
+    <div class="form-group">
+      <label for="title">Quiz Title</label>
+      <input type="text" id="title" name="title" value="<%= quiz.title %>" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3"><%= quiz.description %></textarea>
+    </div>
+    
+    <div class="form-group">
+      <label>
+        <input type="checkbox" name="isPublic" <%= quiz.isPublic ? 'checked' : '' %>> 
+        Public Quiz (visible to everyone)
+      </label>
+    </div>
+    
+    <h2>Questions</h2>
+    <div id="questions-container">
+      <% quiz.questions.forEach((question, index) => { %>
+        <div class="question-item" data-index="<%= index %>">
+          <div class="question-header">
+            <h3>Question <%= index + 1 %></h3>
+            <button type="button" class="btn small danger remove-question">Remove</button>
+          </div>
+          
+          <div class="form-group">
+            <label for="questions[<%= index %>][question]">Question</label>
+            <input type="text" 
+                  id="questions[<%= index %>][question]" 
+                  name="questions[<%= index %>][question]" 
+                  value="<%= question.question %>" 
+                  required>
+          </div>
+          
+          <div class="form-group">
+            <label for="questions[<%= index %>][timeLimit]">Time Limit (seconds)</label>
+            <input type="number" 
+                  id="questions[<%= index %>][timeLimit]" 
+                  name="questions[<%= index %>][timeLimit]" 
+                  min="5" max="60" 
+                  value="<%= question.timeLimit %>" 
+                  required>
+          </div>
+          
+          <div class="options-container">
+            <% question.options.forEach((option, optIndex) => { %>
+              <div class="form-group">
+                <label>
+                  <input type="radio" 
+                        name="questions[<%= index %>][correctAnswer]" 
+                        value="<%= optIndex %>" 
+                        <%= question.correctAnswer === optIndex ? 'checked' : '' %>
+                        required>
+                  Option <%= optIndex + 1 %>
+                </label>
+                <input type="text" 
+                      name="questions[<%= index %>][options][]" 
+                      value="<%= option %>" 
+                      required>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+    
+    <button type="button" id="addQuestionBtn" class="btn">Add Question</button>
+    <button type="submit" class="btn primary">Update Quiz</button>
+  </form>
+</div>
+
+<template id="question-template">
+  <div class="question-item" data-index="__INDEX__">
+    <div class="question-header">
+      <h3>Question __NUMBER__</h3>
+      <button type="button" class="btn small danger remove-question">Remove</button>
+    </div>
+    
+    <div class="form-group">
+      <label for="questions[__INDEX__][question]">Question</label>
+      <input type="text" id="questions[__INDEX__][question]" name="questions[__INDEX__][question]" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="questions[__INDEX__][timeLimit]">Time Limit (seconds)</label>
+      <input type="number" id="questions[__INDEX__][timeLimit]" name="questions[__INDEX__][timeLimit]" 
+        min="5" max="60" value="20" required>
+    </div>
+    
+    <div class="options-container">
+      <div class="form-group">
+        <label>
+          <input type="radio" name="questions[__INDEX__][correctAnswer]" value="0" required checked>
+          Option 1
+        </label>
+        <input type="text" name="questions[__INDEX__][options][]" required>
+      </div>
+      
+      <div class="form-group">
+        <label>
+          <input type="radio" name="questions[__INDEX__][correctAnswer]" value="1" required>
+          Option 2
+        </label>
+        <input type="text" name="questions[__INDEX__][options][]" required>
+      </div>
+      
+      <div class="form-group">
+        <label>
+          <input type="radio" name="questions[__INDEX__][correctAnswer]" value="2" required>
+          Option 3
+        </label>
+        <input type="text" name="questions[__INDEX__][options][]" required>
+      </div>
+      
+      <div class="form-group">
+        <label>
+          <input type="radio" name="questions[__INDEX__][correctAnswer]" value="3" required>
+          Option 4
+        </label>
+        <input type="text" name="questions[__INDEX__][options][]" required>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const questionsContainer = document.getElementById('questions-container');
+    const addQuestionBtn = document.getElementById('addQuestionBtn');
+    const questionTemplate = document.getElementById('question-template').innerHTML;
+    let questionCount =  quiz.questions.length;
+    
+    // Event listener for Add Question button
+    addQuestionBtn.addEventListener('click', addQuestion);
+    
+    // Event delegation for Remove Question buttons
+    questionsContainer.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-question')) {
+        const questionItem = e.target.closest('.question-item');
+        
+        // Don't remove if it's the last question
+        if (questionsContainer.children.length > 1) {
+          questionItem.remove();
+          renumberQuestions();
+        }
+      }
+    });
+    
+    function addQuestion() {
+      const newQuestion = questionTemplate
+        .replace(/__INDEX__/g, questionCount)
+        .replace(/__NUMBER__/g, questionCount + 1);
+      
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = newQuestion;
+      
+      questionsContainer.appendChild(tempDiv.firstElementChild);
+      questionCount++;
+    }
+    
+    function renumberQuestions() {
+      const questions = questionsContainer.querySelectorAll('.question-item');
+      
+      questions.forEach((question, index) => {
+        question.querySelector('h3').textContent = `Question ${index + 1}`;
+      });
+    }
+  });
+</script>
+
+<%- include('../partials/footer') %>

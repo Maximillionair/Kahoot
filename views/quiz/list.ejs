@@ -1,0 +1,38 @@
+<%- include('../partials/header') %>
+
+<div class="quiz-list">
+  <div class="quiz-header">
+    <h1>My Quizzes</h1>
+    <a href="/quiz/create" class="btn">Create New Quiz</a>
+  </div>
+  
+  <% if (quizzes && quizzes.length > 0) { %>
+    <div class="quiz-grid">
+      <% quizzes.forEach(quiz => { %>
+        <div class="quiz-card">
+          <h3><%= quiz.title %></h3>
+          <p><%= quiz.description || 'No description' %></p>
+          <p><small>Questions: <%= quiz.questions.length %></small></p>
+          <p><small>Created by: <%= quiz.creator.username %></small></p>
+          
+          <div class="quiz-actions">
+            <% if (quiz.creator._id.toString() === userId) { %>
+              <a href="/quiz/edit/<%= quiz._id %>" class="btn small">Edit</a>
+              <form action="/quiz/delete/<%= quiz._id %>?_method=DELETE" method="POST">
+                <button type="submit" class="btn small danger">Delete</button>
+              </form>
+            <% } %>
+            <a href="/game/host/<%= quiz._id %>" class="btn small primary">Host Game</a>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <div class="empty-state">
+      <p>You haven't created any quizzes yet.</p>
+      <a href="/quiz/create" class="btn">Create Your First Quiz</a>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,19 @@
+<%- include('partials/header') %>
+
+<div class="welcome">
+  <h1>Welcome to Kahoot Clone</h1>
+  <p>Create and play interactive quizzes in real-time!</p>
+  
+  <div class="actions">
+    <% if (user) { %>
+      <a href="/quiz" class="btn">My Quizzes</a>
+      <a href="/game/join" class="btn">Join Game</a>
+    <% } else { %>
+      <a href="/auth/login" class="btn">Login</a>
+      <a href="/auth/register" class="btn">Register</a>
+      <a href="/game/join" class="btn">Join as Guest</a>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

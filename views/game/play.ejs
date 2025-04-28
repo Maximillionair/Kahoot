@@ -1,0 +1,339 @@
+<%- include('../partials/header') %>
+
+<div class="game-play" id="game-container">
+  <% if (isHost) { %>
+    <!-- Host View -->
+    <div class="host-view" id="host-view">
+      <h2 class="quiz-title"><%= game.quiz.title %></h2>
+      
+      <div class="host-controls">
+        <button id="next-question-btn" class="btn primary">Start First Question</button>
+      </div>
+      
+      <div class="question-display" id="question-display" style="display:none;">
+        <h3 id="question-text"></h3>
+        
+        <div class="options-grid">
+          <div class="option" data-option="0"></div>
+          <div class="option" data-option="1"></div>
+          <div class="option" data-option="2"></div>
+          <div class="option" data-option="3"></div>
+        </div>
+        
+        <div class="timer-container">
+          <div id="timer" class="timer"></div>
+          <span id="timer-text">20</span>
+        </div>
+      </div>
+      
+      <div class="player-status">
+        <h3>Players Answered: <span id="answered-count">0</span>/<span id="player-count">0</span></h3>
+      </div>
+      
+      <div class="leaderboard" id="leaderboard" style="display:none;">
+        <h3>Leaderboard</h3>
+        <ol id="scores-list"></ol>
+      </div>
+    </div>
+  <% } else { %>
+    <!-- Player View -->
+    <div class="player-view" id="player-view">
+      <h2 class="player-name">Playing as: <%= player.username %></h2>
+      
+      <div class="waiting-screen" id="waiting-screen">
+        <h3>Waiting for question...</h3>
+      </div>
+      
+      <div class="question-container" id="question-container" style="display:none;">
+        <h3 id="question-text"></h3>
+        
+        <div class="timer-container">
+          <div id="timer" class="timer"></div>
+          <span id="timer-text">20</span>
+        </div>
+        
+        <div class="options-grid" id="options-grid">
+          <button class="option" data-option="0"></button>
+          <button class="option" data-option="1"></button>
+          <button class="option" data-option="2"></button>
+          <button class="option" data-option="3"></button>
+        </div>
+      </div>
+      
+      <div class="answer-result" id="answer-result" style="display:none;">
+        <div id="result-icon"></div>
+        <h3 id="result-text"></h3>
+        <p id="points-text"></p>
+      </div>
+      
+      <div class="game-over" id="game-over" style="display:none;">
+        <h3>Game Over!</h3>
+        <div id="final-score"></div>
+        <div id="final-rank"></div>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script id="game-data" type="application/json">
+    {
+      "gameId": "<%= game._id %>",
+      "isHost": <%= isHost %>,
+      "playerId": "<%= player ? player._id : '' %>"
+    }
+  </script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const socket = io();
+    // Create a data object in a separate script tag before your main script
+    const gameData = JSON.parse(document.getElementById('game-data').textContent);
+    const gameId = gameData.gameId;
+    const isHost = gameData.isHost;
+    const playerId = gameData.playerId;
+    let currentQuestion = null;
+    let timerInterval = null;
+    let startTime = 0;
+    
+    // Join the game room
+    socket.emit('join-game', { gameId, playerId });
+    
+    if (isHost) { 
+      // Host Game Logic
+      const nextQuestionBtn = document.getElementById('next-question-btn');
+      const questionDisplay = document.getElementById('question-display');
+      const questionText = document.getElementById('question-text');
+      const options = document.querySelectorAll('.option');
+      const timerElement = document.getElementById('timer');
+      const timerText = document.getElementById('timer-text');
+      const answeredCount = document.getElementById('answered-count');
+      const playerCount = document.getElementById('player-count');
+      const leaderboard = document.getElementById('leaderboard');
+      const scoresList = document.getElementById('scores-list');
+      
+      let playerAnswered = 0;
+      let totalPlayers = 0;
+      let questionIndex = 0;
+      
+      socket.on('player-joined', function(data) {
+        totalPlayers = data.players.length;
+        playerCount.textContent = totalPlayers;
+      });
+      
+      socket.on('player-answered', function() {
+        playerAnswered++;
+        answeredCount.textContent = playerAnswered;
+      });
+      
+      nextQuestionBtn.addEventListener('click', function() {
+        socket.emit('next-question', { gameId });
+        nextQuestionBtn.disabled = true;
+      });
+      
+      // Receive new question from server
+      socket.on('new-question', function(data) {
+        questionDisplay.style.display = 'block';
+        leaderboard.style.display = 'none';
+        
+        currentQuestion = data;
+        questionText.textContent = data.question;
+        
+        // Reset counters
+        playerAnswered = 0;
+        answeredCount.textContent = playerAnswered;
+        
+        // Set options
+        options.forEach((option, index) => {
+          option.textContent = data.options[index];
+        });
+        
+        // Start timer
+        let timeLeft = data.timeLimit;
+        timerText.textContent = timeLeft;
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          timeLeft--;
+          timerText.textContent = timeLeft;
+          timerElement.style.width = (timeLeft / data.timeLimit * 100) + '%';
+          
+          if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            
+            // Display correct answer
+            options.forEach((option, index) => {
+              if (index === data.correctOption) {
+                option.classList.add('correct');
+              }
+            });
+            
+            // Wait 2 seconds and then enable next question button
+            setTimeout(() => {
+              options.forEach(option => option.classList.remove('correct'));
+              questionDisplay.style.display = 'none';
+              leaderboard.style.display = 'block';
+              
+              // Update leaderboard
+              socket.emit('get-scores', { gameId });
+              
+              nextQuestionBtn.disabled = false;
+              nextQuestionBtn.textContent = 'Next Question';
+            }, 2000);
+          }
+        }, 1000);
+      });
+      
+      // Update leaderboard
+      socket.on('scores-update', function(data) {
+        scoresList.innerHTML = '';
+        data.scores.forEach(player => {
+          const li = document.createElement('li');
+          li.textContent = `${player.username}: ${player.score} points`;
+          scoresList.appendChild(li);
+        });
+      });
+      
+      // Game over
+      socket.on('game-over', function(data) {
+        questionDisplay.style.display = 'none';
+        leaderboard.style.display = 'block';
+        nextQuestionBtn.style.display = 'none';
+        
+        // Display final scores
+        scoresList.innerHTML = '';
+        data.scores.forEach(player => {
+          const li = document.createElement('li');
+          li.textContent = `${player.username}: ${player.score} points`;
+          scoresList.appendChild(li);
+        });
+      });
+      
+    } else { 
+      // Player Game Logic
+      const waitingScreen = document.getElementById('waiting-screen');
+      const questionContainer = document.getElementById('question-container');
+      const questionText = document.getElementById('question-text');
+      const optionsGrid = document.getElementById('options-grid');
+      const options = document.querySelectorAll('.option');
+      const timerElement = document.getElementById('timer');
+      const timerText = document.getElementById('timer-text');
+      const answerResult = document.getElementById('answer-result');
+      const resultIcon = document.getElementById('result-icon');
+      const resultText = document.getElementById('result-text');
+      const pointsText = document.getElementById('points-text');
+      const gameOver = document.getElementById('game-over');
+      const finalScore = document.getElementById('final-score');
+      const finalRank = document.getElementById('final-rank');
+      
+      let selectedOption = null;
+      let hasAnswered = false;
+      
+      // Add click event listeners to options
+      options.forEach(option => {
+        option.addEventListener('click', function() {
+          if (hasAnswered) return;
+          
+          hasAnswered = true;
+          selectedOption = parseInt(this.getAttribute('data-option'));
+          startTime = Date.now() - startTime; // Calculate response time
+          
+          // Highlight selected option
+          options.forEach(opt => opt.classList.remove('selected'));
+          this.classList.add('selected');
+          
+          // Send answer to server
+          socket.emit('submit-answer', {
+            gameId,
+            playerId,
+            questionId: currentQuestion.id,
+            selectedOption,
+            responseTime: startTime
+          });
+        });
+      });
+      
+      // New question received
+      socket.on('new-question', function(data) {
+        waitingScreen.style.display = 'none';
+        questionContainer.style.display = 'block';
+        answerResult.style.display = 'none';
+        
+        currentQuestion = data;
+        questionText.textContent = data.question;
+        
+        // Reset state
+        hasAnswered = false;
+        selectedOption = null;
+        startTime = Date.now();
+        
+        // Set options
+        options.forEach((option, index) => {
+          option.textContent = data.options[index];
+          option.classList.remove('selected', 'correct', 'incorrect');
+        });
+        
+        // Start timer
+        let timeLeft = data.timeLimit;
+        timerText.textContent = timeLeft;
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          timeLeft--;
+          timerText.textContent = timeLeft;
+          timerElement.style.width = (timeLeft / data.timeLimit * 100) + '%';
+          
+          if (timeLeft <= 0 || hasAnswered) {
+            clearInterval(timerInterval);
+            
+            if (!hasAnswered) {
+              // Time's up without answering
+              socket.emit('submit-answer', {
+                gameId,
+                playerId,
+                questionId: currentQuestion.id,
+                selectedOption: null,
+                responseTime: data.timeLimit * 1000
+              });
+            }
+          }
+        }, 1000);
+      });
+      
+      // Answer result
+      socket.on('answer-result', function(data) {
+        questionContainer.style.display = 'none';
+        answerResult.style.display = 'block';
+        
+        if (data.correct) {
+          resultIcon.innerHTML = '✓';
+          resultIcon.className = 'correct-icon';
+          resultText.textContent = 'Correct!';
+        } else {
+          resultIcon.innerHTML = '✗';
+          resultIcon.className = 'incorrect-icon';
+          resultText.textContent = 'Incorrect!';
+        }
+        
+        pointsText.textContent = `You earned ${data.points} points`;
+        
+        // Wait for next question
+        setTimeout(() => {
+          answerResult.style.display = 'none';
+          waitingScreen.style.display = 'block';
+        }, 3000);
+      });
+      
+      // Game over
+      socket.on('game-over', function(data) {
+        waitingScreen.style.display = 'none';
+        questionContainer.style.display = 'none';
+        answerResult.style.display = 'none';
+        gameOver.style.display = 'block';
+        
+        const playerData = data.scores.find(p => p.id === playerId);
+        finalScore.textContent = `Your score: ${playerData.score} points`;
+        finalRank.textContent = `Your rank: ${playerData.rank} of ${data.scores.length}`;
+      });
+    }
+  });
+</script>

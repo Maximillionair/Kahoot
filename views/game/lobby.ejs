@@ -1,0 +1,91 @@
+<%- include('../partials/header') %>
+
+<div class="game-lobby">
+  <h1>Game Lobby</h1>
+  
+  <div class="game-info">
+    <h2><%= quiz.title %></h2>
+    <p>Game PIN: <span class="game-pin"><%= game.pin %></span></p>
+  </div>
+  
+  <% if (isHost) { %>
+    <div class="player-list">
+      <h3>Players (<span id="player-count">0</span>)</h3>
+      <ul id="players"></ul>
+    </div>
+    
+    <form action="/game/start/<%= game._id %>" method="POST">
+      <button type="submit" class="btn primary" id="start-btn" disabled>Start Game</button>
+    </form>
+  <% } else if (player) { %>
+    <div class="player-waiting">
+      <h3>You've joined as <%= player.username %></h3>
+      <p>Waiting for the host to start the game...</p>
+      
+      <div class="loader">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const socket = io();
+    const gameId = '<%= game._id %>';
+    
+    if (isHost) {
+      const playerList = document.getElementById('players');
+      const playerCount = document.getElementById('player-count');
+      const startBtn = document.getElementById('start-btn');
+      const quiz = JSON.stringify(quiz) ;
+      
+      // Host creates the game
+      socket.emit('create-game', { 
+        gameId: gameId,
+        quiz: quiz
+      });
+      
+      // Handle player joins
+      socket.on('player-joined', function(data) {
+        const players = data.players || [];
+        
+        // Update player list
+        playerList.innerHTML = '';
+        players.forEach(playerName => {
+          const li = document.createElement('li');
+          li.textContent = playerName;
+          playerList.appendChild(li);
+        });
+        
+        // Update player count
+        playerCount.textContent = players.length;
+        
+        // Enable start button if there's at least one player
+        startBtn.disabled = players.length === 0;
+      });
+     } else if (player) { 
+      // Player joins the game
+      socket.emit('join-game', {
+        gameId: gameId,
+        username: '<%= player.username %>'
+      });
+      
+      // Handle game join response
+      socket.on('game-joined', function(data) {
+        if (!data.success) {
+          alert(data.message || 'Failed to join the game');
+          window.location.href = '/game/join';
+        }
+      });
+      
+      // Handle game start
+      socket.on('game-started', function() {
+        window.location.href = '/game/play/<%= game._id %>';
+      });
+    } 
+  });
+</script>
+
+<%- include('../partials/footer') %>
