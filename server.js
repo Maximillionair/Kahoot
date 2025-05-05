@@ -3,7 +3,7 @@ const app = require('./app');
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
-const connectDB = require('config/db')
+const connectDB = require('./config/db')
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3000;
