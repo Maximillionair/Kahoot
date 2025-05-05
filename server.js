@@ -3,16 +3,14 @@ const app = require('./app');
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
+const connectDB = require('config/db')
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/kahoot-clone')
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+connectDB()
 
 // Socket.io for real-time game functionality
 const games = {};
