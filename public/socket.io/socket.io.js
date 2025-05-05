@@ -1,94 +1,15 @@
-<%- include('../partials/header') %>
-
-<div class="game-play" id="game-container">
-  <% if (isHost) { %>
-    <!-- Host View -->
-    <div class="host-view" id="host-view">
-      <h2 class="quiz-title"><%= game.quiz.title %></h2>
-      
-      <div class="host-controls">
-        <button id="next-question-btn" class="btn primary">Start First Question</button>
-      </div>
-      
-      <div class="question-display" id="question-display" style="display:none;">
-        <h3 id="question-text"></h3>
-        
-        <div class="options-grid">
-          <div class="option" data-option="0"></div>
-          <div class="option" data-option="1"></div>
-          <div class="option" data-option="2"></div>
-          <div class="option" data-option="3"></div>
-        </div>
-        
-        <div class="timer-container">
-          <div id="timer" class="timer"></div>
-          <span id="timer-text">20</span>
-        </div>
-      </div>
-      
-      <div class="player-status">
-        <h3>Players Answered: <span id="answered-count">0</span>/<span id="player-count">0</span></h3>
-      </div>
-      
-      <div class="leaderboard" id="leaderboard" style="display:none;">
-        <h3>Leaderboard</h3>
-        <ol id="scores-list"></ol>
-      </div>
-    </div>
-  <% } else { %>
-    <!-- Player View -->
-    <div class="player-view" id="player-view">
-      <h2 class="player-name">Playing as: <%= player.username %></h2>
-      
-      <div class="waiting-screen" id="waiting-screen">
-        <h3>Waiting for question...</h3>
-      </div>
-      
-      <div class="question-container" id="question-container" style="display:none;">
-        <h3 id="question-text"></h3>
-        
-        <div class="timer-container">
-          <div id="timer" class="timer"></div>
-          <span id="timer-text">20</span>
-        </div>
-        
-        <div class="options-grid" id="options-grid">
-          <button class="option" data-option="0"></button>
-          <button class="option" data-option="1"></button>
-          <button class="option" data-option="2"></button>
-          <button class="option" data-option="3"></button>
-        </div>
-      </div>
-      
-      <div class="answer-result" id="answer-result" style="display:none;">
-        <div id="result-icon"></div>
-        <h3 id="result-text"></h3>
-        <p id="points-text"></p>
-      </div>
-      
-      <div class="game-over" id="game-over" style="display:none;">
-        <h3>Game Over!</h3>
-        <div id="final-score"></div>
-        <div id="final-rank"></div>
-      </div>
-    </div>
-  <% } %>
-</div>
-
-<script src="/socket.io/socket.io.js" defer></script>
-<!-- <script>
-    document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
     const socket = io();
     const gameId = '<%= game._id %>';
     let currentQuestion = null;
     let timerInterval = null;
     let startTime = 0;
     
-    if (isHost) {
+     if (isHost) { 
       // Host Game Logic
       // [Host logic was already included in the previous artifact]
       
-    } else {
+     } else { 
       // Player Game Logic
       const waitingScreen = document.getElementById('waiting-screen');
       const questionContainer = document.getElementById('question-container');
@@ -237,6 +158,93 @@
       });
     }
   });
-</script> -->
 
-<%- include('../partials/footer') %>
+  document.addEventListener('DOMContentLoaded', function() {
+    const socket = io();
+    const gameId = '<%= game._id %>';
+    const quiz = JSON.stringify(quiz) ;
+    const playerList = document.getElementById('players');
+    const playerCount = document.getElementById('player-count');
+    const startBtn = document.getElementById('start-btn');
+    
+    // Connect to socket and create game room
+    socket.emit('create-game', { 
+      gameId: gameId,
+      quiz: quiz
+    });
+    
+    // Handle player joins
+    socket.on('player-joined', function(data) {
+      const players = data.players || [];
+      
+      // Update player list
+      playerList.innerHTML = '';
+      players.forEach(playerName => {
+        const li = document.createElement('li');
+        li.textContent = playerName;
+        playerList.appendChild(li);
+      });
+      
+      // Update player count
+      playerCount.textContent = players.length;
+      
+      // Enable start button if there's at least one player
+      startBtn.disabled = players.length === 0;
+    });
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const socket = io();
+    const gameId = '<%= game._id %>';
+    
+    if (isHost) {
+      const playerList = document.getElementById('players');
+      const playerCount = document.getElementById('player-count');
+      const startBtn = document.getElementById('start-btn');
+      const quizData = '<%- JSON.stringify(quiz) %>';
+      
+      // Host creates the game
+      socket.emit('create-game', { 
+        gameId: gameId,
+        quiz: quiz
+      });
+      
+      // Handle player joins
+      socket.on('player-joined', function(data) {
+        const players = data.players || [];
+        
+        // Update player list
+        playerList.innerHTML = '';
+        players.forEach(playerName => {
+          const li = document.createElement('li');
+          li.textContent = playerName;
+          playerList.appendChild(li);
+        });
+        
+        // Update player count
+        playerCount.textContent = players.length;
+        
+        // Enable start button if there's at least one player
+        startBtn.disabled = players.length === 0;
+      });
+     } else if (player) { 
+      // Player joins the game
+      socket.emit('join-game', {
+        gameId: gameId,
+        username: '<%= player.username %>'
+      });
+      
+      // Handle game join response
+      socket.on('game-joined', function(data) {
+        if (!data.success) {
+          alert(data.message || 'Failed to join the game');
+          window.location.href = '/game/join';
+        }
+      });
+      
+      // Handle game start
+      socket.on('game-started', function() {
+        window.location.href = '/game/play/<%= game._id %>';
+      });
+    } 
+  });
