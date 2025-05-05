@@ -30,62 +30,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script>
-//   document.addEventListener('DOMContentLoaded', function() {
-//     const socket = io();
-//     const gameId = '<%= game._id %>';
-    
-//     if (isHost) {
-//       const playerList = document.getElementById('players');
-//       const playerCount = document.getElementById('player-count');
-//       const startBtn = document.getElementById('start-btn');
-//       const quizData = '<%- JSON.stringify(quiz) %>';
-      
-//       // Host creates the game
-//       socket.emit('create-game', { 
-//         gameId: gameId,
-//         quiz: quiz
-//       });
-      
-//       // Handle player joins
-//       socket.on('player-joined', function(data) {
-//         const players = data.players || [];
-        
-//         // Update player list
-//         playerList.innerHTML = '';
-//         players.forEach(playerName => {
-//           const li = document.createElement('li');
-//           li.textContent = playerName;
-//           playerList.appendChild(li);
-//         });
-        
-//         // Update player count
-//         playerCount.textContent = players.length;
-        
-//         // Enable start button if there's at least one player
-//         startBtn.disabled = players.length === 0;
-//       });
-//      } else if (player) { 
-//       // Player joins the game
-//       socket.emit('join-game', {
-//         gameId: gameId,
-//         username: '<%= player.username %>'
-//       });
-      
-//       // Handle game join response
-//       socket.on('game-joined', function(data) {
-//         if (!data.success) {
-//           alert(data.message || 'Failed to join the game');
-//           window.location.href = '/game/join';
-//         }
-//       });
-      
-//       // Handle game start
-//       socket.on('game-started', function() {
-//         window.location.href = '/game/play/<%= game._id %>';
-//       });
-//     } 
-//   });
-</script>
+
 
 <%- include('../partials/footer') %>

@@ -37,7 +37,7 @@ exports.postRegister = async (req, res) => {
     
     await user.save();
     req.flash('success_msg', 'Registration successful. You can now log in');
-    res.redirect('/auth/login');
+    postLogin()
   } catch (error) {
     console.error(error);
     req.flash('error_msg', 'Server error');
