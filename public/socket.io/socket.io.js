@@ -1,9 +1,12 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
     const socket = io();
-    const gameId = '<%= game._id %>';
-    let currentQuestion = null;
-    let timerInterval = null;
-    let startTime = 0;
+    const gameId = window.gameId;
+    const quiz = window.quiz;
+    const isHost = window.isHost === 'true';
+    const username = window.username;
+  
+    // Now you can use gameId, quiz, isHost, username safely
+
     
      if (isHost) { 
       // Host Game Logic
@@ -31,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Join the game as player
       socket.emit('join-game', {
         gameId: gameId,
-        username: '<%= player.username %>'
+        username: ' player.username'
       });
       
       // Receive new question from server
@@ -142,8 +145,8 @@ document.addEventListener('DOMContentLoaded', function() {
         gameOver.style.display = 'block';
         
         // Find player's score and rank
-        const playerData = data.scores.find(p => p.username === '<%= player.username %>');
-        const rank = data.scores.findIndex(p => p.username === '<%= player.username %>') + 1;
+        const playerData = data.scores.find(p => p.username === ' player.username');
+        const rank = data.scores.findIndex(p => p.username === ' player.username') + 1;
         
         if (playerData) {
           finalScore.textContent = `Your score: ${playerData.score} points`;
@@ -158,14 +161,6 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   });
-
-  document.addEventListener('DOMContentLoaded', function() {
-    const socket = io();
-    const gameId = '<%= game._id %>';
-    const quiz = JSON.stringify(quiz) ;
-    const playerList = document.getElementById('players');
-    const playerCount = document.getElementById('player-count');
-    const startBtn = document.getElementById('start-btn');
     
     // Connect to socket and create game room
     socket.emit('create-game', { 
@@ -191,17 +186,16 @@ document.addEventListener('DOMContentLoaded', function() {
       // Enable start button if there's at least one player
       startBtn.disabled = players.length === 0;
     });
-  });
 
   document.addEventListener('DOMContentLoaded', function() {
     const socket = io();
-    const gameId = '<%= game._id %>';
+    const gameId = 'game._id';
     
     if (isHost) {
       const playerList = document.getElementById('players');
       const playerCount = document.getElementById('player-count');
       const startBtn = document.getElementById('start-btn');
-      const quizData = '<%- JSON.stringify(quiz) %>';
+      const quizData = ' JSON.stringify(quiz)';
       
       // Host creates the game
       socket.emit('create-game', { 
@@ -231,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Player joins the game
       socket.emit('join-game', {
         gameId: gameId,
-        username: '<%= player.username %>'
+        username: ' player.username'
       });
       
       // Handle game join response
@@ -244,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Handle game start
       socket.on('game-started', function() {
-        window.location.href = '/game/play/<%= game._id %>';
+        window.location.href = '/game/play/ game._id ';
       });
     } 
-  });
+});

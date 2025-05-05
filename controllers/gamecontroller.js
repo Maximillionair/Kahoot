@@ -75,7 +75,8 @@ exports.getLobby = async (req, res) => {
     
     // Check if user is host or player
     const isHost = req.session.user && game.host.equals(req.session.user.id);
-    const isPlayer = req.session.tempPlayer && req.session.tempPlayer.gameId.equals(game._id);
+    const isPlayer = req.session.tempPlayer && String(req.session.tempPlayer.gameId) === String(game._id);
+    
     
     if (!isHost && !isPlayer) {
       req.flash('error_msg', 'You are not authorized to view this lobby');

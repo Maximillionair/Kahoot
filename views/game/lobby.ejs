@@ -29,7 +29,14 @@
   <% } %>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
+
+    window.gameId = "<%= game._id %>";
+    window.quiz = <%- JSON.stringify(quiz) %>;
+    window.isHost = <%= isHost ? 'true' : 'false' %>;
+    window.username = "<%= player ? player.username : '' %>";
+
+  <script src="/socket.io/socket.io.js"></script>
+  
 
 
 <%- include('../partials/footer') %>
