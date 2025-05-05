@@ -18,11 +18,19 @@
     <ul id="players"></ul>
   </div>
   
-  <form action="/game/start/<%= game._id %>" method="POST">
+  <form id="start-form">
     <button type="submit" class="btn primary" id="start-btn" disabled>Start Game</button>
   </form>
 </div>
 
+<!-- Hidden data for socket.io -->
+<div id="game-data" 
+  data-game-id="<%= game._id %>" 
+  data-is-host="true" 
+  data-username="">
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
+<script src="/js/game.js"></script>
 
 <%- include('../partials/footer') %>

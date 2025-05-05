@@ -14,7 +14,7 @@
       <ul id="players"></ul>
     </div>
     
-    <form action="/game/start/<%= game._id %>" method="POST">
+    <form id="start-form">
       <button type="submit" class="btn primary" id="start-btn" disabled>Start Game</button>
     </form>
   <% } else if (player) { %>
@@ -29,14 +29,14 @@
   <% } %>
 </div>
 
+<!-- Hidden data for socket.io -->
+<div id="game-data" 
+  data-game-id="<%= game._id %>" 
+  data-is-host="<%= isHost ? 'true' : 'false' %>" 
+  data-username="<%= player ? player.username : '' %>">
+</div>
 
-    window.gameId = "<%= game._id %>";
-    window.quiz = <%- JSON.stringify(quiz) %>;
-    window.isHost = <%= isHost ? 'true' : 'false' %>;
-    window.username = "<%= player ? player.username : '' %>";
-
-  <script src="/socket.io/socket.io.js"></script>
-  
-
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/game.js"></script>
 
 <%- include('../partials/footer') %>
