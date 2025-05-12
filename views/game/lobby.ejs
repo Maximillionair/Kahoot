@@ -5,25 +5,28 @@
   
   <div class="game-info">
     <h2><%= quiz.title %></h2>
-    <p>Game PIN: <span class="game-pin"><%= game.pin %></span></p>
+    <div class="pin-display">
+      <h3>Game PIN: <span class="game-pin"><%= game.pin %></span></h3>
+    </div>
   </div>
   
-  <% if (isHost) { %>
-    <div class="player-list">
-      <h3>Players (<span id="player-count">0</span>)</h3>
-      <ul id="players"></ul>
-    </div>
-    
-    <form id="start-form">
-      <button type="submit" class="btn primary" id="start-btn" disabled>Start Game</button>
-    </form>
-  <% } else if (player) { %>
-    <div class="player-waiting">
-      <h3>You've joined as <%= player.username %></h3>
-      <p>Waiting for the host to start the game...</p>
+  <% if (player) { %>
+    <div class="player-status">
+      <div class="player-welcome">
+        <h3>Welcome, <%= player.username %>!</h3>
+        <p>You've successfully joined the game</p>
+      </div>
       
-      <div class="loader">
-        <div class="spinner"></div>
+      <div class="waiting-status">
+        <h3>Waiting for host to start...</h3>
+        <div class="loader">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      
+      <div class="player-list">
+        <h3>Players in game: <span id="player-count">0</span></h3>
+        <ul id="players"></ul>
       </div>
     </div>
   <% } %>
@@ -32,7 +35,7 @@
 <!-- Hidden data for socket.io -->
 <div id="game-data" 
   data-game-id="<%= game._id %>" 
-  data-is-host="<%= isHost ? 'true' : 'false' %>" 
+  data-is-host="false" 
   data-username="<%= player ? player.username : '' %>">
 </div>
 

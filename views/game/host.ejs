@@ -1,6 +1,6 @@
 <%- include('../partials/header') %>
 
-<div class="host-game">
+<div class="game-lobby">
   <h1>Host Game: <%= quiz.title %></h1>
   
   <div class="game-info">
@@ -8,9 +8,9 @@
     <p>Share this PIN with your players to join the game!</p>
   </div>
   
-  <div class="game-details">
-    <p>Questions: <%= quiz.questions.length %></p>
-    <p>Players: <span id="player-count">0</span></p>
+  <div class="game-status">
+    <h3>Questions: <%= quiz.questions.length %></h3>
+    <h3>Players: <span id="player-count">0</span></h3>
   </div>
   
   <div class="player-list">
@@ -18,7 +18,7 @@
     <ul id="players"></ul>
   </div>
   
-  <form id="start-form">
+  <form action="/game/start/<%= game._id %>" method="POST" id="start-form">
     <button type="submit" class="btn primary" id="start-btn" disabled>Start Game</button>
   </form>
 </div>

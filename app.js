@@ -2,6 +2,7 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const flash = require('connect-flash');
 const methodOverride = require('method-override');
 
@@ -21,12 +22,40 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(methodOverride('_method'));
+
+// Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'kahoot-clone-secret',
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/kahoot-clone',
+    ttl: 24 * 60 * 60 // 1 day
+  }),
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
+  }
 }));
+
 app.use(flash());
+
+// Debug middleware
+app.use((req, res, next) => {
+  console.log('\n--- Request Debug Info ---');
+  console.log('URL:', req.url);
+  console.log('Method:', req.method);
+  console.log('Session:', {
+    user: req.session.user,
+    tempPlayer: req.session.tempPlayer
+  });
+  console.log('Flash Messages:', {
+    success: req.flash('success_msg'),
+    error: req.flash('error_msg')
+  });
+  next();
+});
 
 // Global variables middleware
 app.use((req, res, next) => {
