@@ -20,48 +20,80 @@ connectDB()
 const games = {};
 
 io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
+  console.log('\n--- Socket Connection ---');
+  console.log('New connection:', socket.id);
+  console.log('Current games state:', Object.keys(games).map(gameId => ({
+    gameId,
+    host: games[gameId].host,
+    playerCount: Object.keys(games[gameId].players).length,
+    players: Object.values(games[gameId].players).map(p => p.username)
+  })));
 
   // Host creates a game
   socket.on('create-game', async ({ gameId }) => {
     try {
+      console.log('\n--- Create Game ---');
+      console.log('Game ID:', gameId);
+      console.log('Socket ID:', socket.id);
+      
       const game = await Game.findById(gameId).populate('quiz');
-      if (!game) return;
+      if (!game) {
+        console.log('Error: Game not found');
+        return;
+      }
       
       games[gameId] = {
         host: socket.id,
         players: {},
         active: false,
-        pin: game.pin
+        pin: game.pin,
+        currentQuestion: 0,
+        answeredCount: 0
       };
       
       socket.join(gameId);
       console.log(`Host created game: ${gameId} with PIN: ${game.pin}`);
+      console.log('Current game state:', games[gameId]);
     } catch (error) {
       console.error('Error creating game:', error);
     }
   });
 
   // Player joins a game
-  socket.on('join-game', async ({ gameId, username }) => {
+  socket.on('join-game', async ({ gameId, username, playerId }) => {
     try {
+      console.log('\n--- Player Join ---');
+      console.log('Game ID:', gameId);
+      console.log('Username:', username);
+      console.log('Socket ID:', socket.id);
+      console.log('Player ID:', playerId);
+      
       const game = await Game.findById(gameId);
-      if (!game) return;
+      if (!game) {
+        console.log('Error: Game not found');
+        return;
+      }
       
       // Initialize game state if not exists
       if (!games[gameId]) {
+        console.log('Initializing new game state');
         games[gameId] = {
           players: {},
           active: false,
-          pin: game.pin
+          pin: game.pin,
+          currentQuestion: 0,
+          answeredCount: 0
         };
       }
       
-      // Add player to game
-      games[gameId].players[socket.id] = {
+      // Add or update player by playerId
+      games[gameId].players[playerId] = games[gameId].players[playerId] || {
         username,
-        score: 0
+        score: 0,
+        answers: [],
       };
+      games[gameId].players[playerId].socketId = socket.id;
+      games[gameId].players[playerId].username = username; // update username in case it changed
       
       socket.join(gameId);
       
@@ -71,6 +103,7 @@ io.on('connection', (socket) => {
       });
       
       console.log(`Player ${username} joined game: ${gameId}`);
+      console.log('Current game state:', games[gameId]);
     } catch (error) {
       console.error('Error joining game:', error);
     }
@@ -79,11 +112,27 @@ io.on('connection', (socket) => {
   // Host starts the game
   socket.on('start-game', async ({ gameId }) => {
     try {
-      const gameState = games[gameId];
-      if (!gameState || gameState.host !== socket.id) return;
+      console.log('\n--- Start Game ---');
+      console.log('Game ID:', gameId);
+      console.log('Socket ID:', socket.id);
       
-      const game = await Game.findById(gameId);
-      if (!game) return;
+      const gameState = games[gameId];
+      if (!gameState) {
+        console.log('Error: Game state not found');
+        return;
+      }
+      if (gameState.host !== socket.id) {
+        console.log('Error: Not the host of this game');
+        return;
+      }
+      
+      const game = await Game.findById(gameId).populate('quiz');
+      if (!game) {
+        console.log('Error: Game not found in database');
+        return;
+      }
+      
+      console.log('Current players before start:', Object.values(gameState.players).map(p => p.username));
       
       // Initialize game state for play
       gameState.active = true;
@@ -101,6 +150,8 @@ io.on('connection', (socket) => {
       // Notify all players that game has started
       io.to(gameId).emit('game-started', { players: currentPlayers });
       console.log(`Game started: ${gameId} with ${currentPlayers.length} players`);
+      console.log('Players in game:', currentPlayers);
+      console.log('Final game state:', gameState);
     } catch (error) {
       console.error('Error starting game:', error);
     }
@@ -114,6 +165,12 @@ io.on('connection', (socket) => {
       try {
         // Fetch quiz from database
         const gameData = await Game.findById(gameId).populate('quiz');
+        
+        // Debug logging
+        console.log('--- next-question DEBUG ---');
+        console.log('game.currentQuestion:', game.currentQuestion);
+        console.log('Number of questions:', gameData.quiz && gameData.quiz.questions ? gameData.quiz.questions.length : 'NO QUIZ OR QUESTIONS');
+        console.log('Questions array:', gameData.quiz && gameData.quiz.questions ? gameData.quiz.questions : 'NO QUIZ OR QUESTIONS');
         
         if (!gameData || !gameData.quiz || !gameData.quiz.questions) {
           socket.emit('error', { message: 'Quiz data not found' });
@@ -158,10 +215,10 @@ io.on('connection', (socket) => {
   });
 
   // Player answers a question
-  socket.on('submit-answer', async ({ gameId, answer, time }) => {
-    if (games[gameId] && games[gameId].players[socket.id]) {
+  socket.on('submit-answer', async ({ gameId, answer, time, playerId }) => {
+    if (games[gameId] && games[gameId].players[playerId]) {
       const game = games[gameId];
-      const player = game.players[socket.id];
+      const player = game.players[playerId];
       
       try {
         // Get quiz data from database
@@ -238,27 +295,33 @@ io.on('connection', (socket) => {
 
   // Handle disconnections
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    console.log('\n--- Socket Disconnect ---');
+    console.log('Disconnected socket:', socket.id);
     
     // Find and handle player/host disconnection for all games
     Object.entries(games).forEach(([gameId, game]) => {
       // If host disconnects
       if (game.host === socket.id) {
+        console.log(`Host left game: ${gameId}`);
         io.to(gameId).emit('host-disconnected');
         delete games[gameId];
-        console.log(`Host left game: ${gameId}`);
       }
       // If player disconnects
-      else if (game.players[socket.id]) {
-        const username = game.players[socket.id].username;
-        delete game.players[socket.id];
-        
-        // Notify remaining players
-        io.to(gameId).emit('player-joined', {
-          players: Object.values(game.players).map(p => p.username)
+      else {
+        // Find player(s) with this socket.id
+        const playerIds = Object.keys(game.players).filter(pid => game.players[pid].socketId === socket.id);
+        playerIds.forEach(pid => {
+          const username = game.players[pid].username;
+          console.log(`Player ${username} (playerId: ${pid}) left game: ${gameId}`);
+          delete game.players[pid];
         });
-        
-        console.log(`Player ${username} left game: ${gameId}`);
+        if (playerIds.length > 0) {
+          // Notify remaining players
+          io.to(gameId).emit('player-joined', {
+            players: Object.values(game.players).map(p => p.username)
+          });
+          console.log('Remaining players:', Object.values(game.players).map(p => p.username));
+        }
       }
     });
   });

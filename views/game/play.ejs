@@ -12,22 +12,19 @@
       
       <div class="question-display" id="question-display" style="display:none;">
         <h3 id="question-text"></h3>
-        
-        <div class="options-grid">
+        <div class="options-grid" id="host-options-grid">
           <div class="option" data-option="0"></div>
           <div class="option" data-option="1"></div>
           <div class="option" data-option="2"></div>
           <div class="option" data-option="3"></div>
         </div>
-        
         <div class="timer-container">
           <div id="timer" class="timer"></div>
           <span id="timer-text">20</span>
         </div>
-      </div>
-      
-      <div class="player-status">
-        <h3>Players Answered: <span id="answered-count">0</span>/<span id="player-count">0</span></h3>
+        <div class="player-status">
+          <h3>Players Answered: <span id="answered-count">0</span>/<span id="player-count">0</span></h3>
+        </div>
       </div>
       
       <div class="leaderboard" id="leaderboard" style="display:none;">
@@ -70,6 +67,7 @@
         <h3>Game Over!</h3>
         <div id="final-score"></div>
         <div id="final-rank"></div>
+        <button id="back-to-menu-btn" class="btn primary">Go Back to Menu</button>
       </div>
     </div>
   <% } %>
