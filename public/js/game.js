@@ -105,13 +105,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Show question to host
         socket.on('new-question', function(data) {
-            if (questionDisplay) questionDisplay.style.display = 'block';
+            smoothTransition(questionDisplay, 'block');
             if (leaderboard) leaderboard.style.display = 'none';
             if (hostQuestionText) hostQuestionText.textContent = data.question;
             if (hostOptionsGrid) {
                 const optionDivs = hostOptionsGrid.querySelectorAll('.option');
                 optionDivs.forEach((div, idx) => {
                     div.textContent = data.options[idx];
+                    div.style.animation = 'fadeIn 0.5s ease';
                 });
             }
             if (timerText) timerText.textContent = data.timeLimit;
@@ -146,13 +147,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Show leaderboard/results
         socket.on('question-results', function(data) {
-            if (questionDisplay) questionDisplay.style.display = 'none';
-            if (leaderboard) leaderboard.style.display = 'block';
+            smoothTransition(questionDisplay, 'none');
+            smoothTransition(leaderboard, 'block');
             if (scoresList) {
                 scoresList.innerHTML = '';
-                data.scores.forEach(player => {
+                data.scores.forEach((player, index) => {
                     const li = document.createElement('li');
                     li.textContent = `${player.username}: ${player.score} points`;
+                    li.style.animation = `fadeIn 0.3s ease ${index * 0.1}s`;
                     scoresList.appendChild(li);
                 });
             }
@@ -209,19 +211,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         socket.on('new-question', function(data) {
-            if (waitingScreen) waitingScreen.style.display = 'none';
-            if (questionContainer) questionContainer.style.display = 'block';
+            smoothTransition(waitingScreen, 'none');
+            smoothTransition(questionContainer, 'block');
             if (answerResult) answerResult.style.display = 'none';
             
             hasAnswered = false;
             if (questionText) questionText.textContent = data.question;
             
-            // Enable all options
+            // Enable all options with animation
             if (options) {
                 options.forEach((option, index) => {
                     option.textContent = data.options[index];
                     option.disabled = false;
-                    option.classList.remove('selected');
+                    option.classList.remove('selected', 'correct', 'incorrect');
+                    option.style.animation = `fadeIn 0.3s ease ${index * 0.1}s`;
                 });
             }
             
@@ -252,14 +255,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1000);
         });
         
-        // Option click handler
+        // Update option click handler
         if (optionsGrid) {
             optionsGrid.addEventListener('click', function(e) {
                 if (e.target.classList.contains('option') && !hasAnswered) {
                     const selectedOption = parseInt(e.target.dataset.option);
                     const timeElapsed = Date.now() - startTime;
                     hasAnswered = true;
+                    
+                    // Add selection animation
                     e.target.classList.add('selected');
+                    e.target.style.animation = 'pulse 0.3s ease';
+                    
                     if (typeof disableOptions === 'function') disableOptions();
                     socket.emit('submit-answer', {
                         gameId: gameId,
@@ -280,22 +287,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         socket.on('answer-result', function(data) {
-            if (questionContainer) questionContainer.style.display = 'none';
-            if (answerResult) answerResult.style.display = 'block';
-            if (resultIcon) resultIcon.innerHTML = data.correct ? '✅' : '❌';
-            if (resultText) resultText.textContent = data.correct ? 'Correct!' : 'Wrong!';
-            if (pointsText) pointsText.textContent = data.correct ? `+${data.points} points` : '0 points';
+            smoothTransition(questionContainer, 'none');
+            smoothTransition(answerResult, 'block');
+            
+            if (resultIcon) {
+                resultIcon.innerHTML = data.correct ? '✅' : '❌';
+                resultIcon.style.animation = 'bounce 0.5s ease';
+            }
+            
+            if (resultText) {
+                resultText.textContent = data.correct ? 'Correct!' : 'Wrong!';
+                resultText.style.color = data.correct ? '#4CAF50' : '#f44336';
+            }
+            
+            if (pointsText) {
+                pointsText.textContent = data.correct ? `+${data.points} points` : '0 points';
+                pointsText.style.animation = 'fadeIn 0.5s ease';
+            }
         });
         
         socket.on('game-over', function(data) {
-            if (waitingScreen) waitingScreen.style.display = 'none';
-            if (questionContainer) questionContainer.style.display = 'none';
-            if (answerResult) answerResult.style.display = 'none';
-            if (gameOver) gameOver.style.display = 'block';
+            smoothTransition(waitingScreen, 'none');
+            smoothTransition(questionContainer, 'none');
+            smoothTransition(answerResult, 'none');
+            smoothTransition(gameOver, 'block');
+            
             const playerData = data.scores.find(p => p.username === username);
             const rank = data.scores.findIndex(p => p.username === username) + 1;
-            if (playerData && finalScore) finalScore.textContent = `Your score: ${playerData.score} points`;
-            if (playerData && finalRank) finalRank.textContent = `Your rank: ${rank} of ${data.scores.length}`;
+            
+            if (playerData && finalScore) {
+                finalScore.textContent = `Your score: ${playerData.score} points`;
+                finalScore.style.animation = 'fadeInDown 0.5s ease';
+            }
+            
+            if (playerData && finalRank) {
+                finalRank.textContent = `Your rank: ${rank} of ${data.scores.length}`;
+                finalRank.style.animation = 'fadeInDown 0.5s ease 0.2s';
+            }
         });
     }
     
@@ -309,7 +337,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const backToMenuBtn = document.getElementById('back-to-menu-btn');
     if (backToMenuBtn) {
         backToMenuBtn.addEventListener('click', () => {
-            window.location.href = '/quiz';
+            backToMenuBtn.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => {
+                window.location.href = '/quiz';
+            }, 300);
         });
     }
-}); 
+});
+
+// Add loading animation function
+function showLoading(element) {
+    element.innerHTML = '<div class="loading"></div>';
+}
+
+// Add smooth transition function
+function smoothTransition(element, display) {
+    element.style.opacity = '0';
+    element.style.display = display;
+    setTimeout(() => {
+        element.style.opacity = '1';
+    }, 50);
+} 

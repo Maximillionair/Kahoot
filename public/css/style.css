@@ -279,27 +279,54 @@
   
   /* Game Play */
   .game-play {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
-  }
-  
-  .host-view, .player-view {
-    background-color: white;
-    border-radius: 0.5rem;
     padding: 2rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    min-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
   }
   
-  .question-display, .question-container {
+  /* Host View Styles */
+  .host-view {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .host-view:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  }
+  
+  .quiz-title {
+    font-size: 2.5rem;
+    color: #fff;
+    margin-bottom: 2rem;
     text-align: center;
-    margin: 1rem 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    animation: fadeInDown 0.5s ease;
   }
   
-  .options-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+  .host-controls {
+    display: flex;
+    justify-content: center;
     gap: 1rem;
-    margin-top: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  /* Question Display Styles */
+  .question-display {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    animation: fadeIn 0.5s ease;
   }
   
   .option {
