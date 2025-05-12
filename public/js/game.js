@@ -221,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         socket.on('new-question', function(data) {
+            console.log('Received new question:', data);
             smoothTransition(waitingScreen, 'none');
             smoothTransition(questionContainer, 'block');
             if (answerResult) answerResult.style.display = 'none';
@@ -253,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     if (!hasAnswered) {
-                        if (typeof disableOptions === 'function') disableOptions();
+                        disableOptions();
                         socket.emit('submit-answer', {
                             gameId: gameId,
                             answer: -1, // No answer
@@ -269,7 +270,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (optionsGrid) {
             optionsGrid.addEventListener('click', function(e) {
                 const option = e.target.closest('.option');
-                if (option && !hasAnswered && !option.disabled) {
+                if (!option) return; // Click was not on an option
+                
+                console.log('Option clicked:', {
+                    option: option.dataset.option,
+                    hasAnswered,
+                    disabled: option.disabled
+                });
+                
+                if (!hasAnswered && !option.disabled) {
                     const selectedOption = parseInt(option.dataset.option);
                     const timeElapsed = Date.now() - startTime;
                     hasAnswered = true;
@@ -279,8 +288,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     option.style.animation = 'pulse 0.3s ease';
                     
                     // Disable all options
-                    const allOptions = optionsGrid.querySelectorAll('.option');
-                    allOptions.forEach(opt => opt.disabled = true);
+                    disableOptions();
+                    
+                    console.log('Submitting answer:', {
+                        gameId,
+                        answer: selectedOption,
+                        timeElapsed,
+                        playerId
+                    });
                     
                     socket.emit('submit-answer', {
                         gameId: gameId,
@@ -296,11 +311,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (options) {
                 options.forEach(option => {
                     option.disabled = true;
+                    option.style.cursor = 'not-allowed';
                 });
             }
         }
         
         socket.on('answer-result', function(data) {
+            console.log('Received answer result:', data);
             smoothTransition(questionContainer, 'none');
             smoothTransition(answerResult, 'block');
             
@@ -321,6 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         socket.on('game-over', function(data) {
+            console.log('Game over:', data);
             smoothTransition(waitingScreen, 'none');
             smoothTransition(questionContainer, 'none');
             smoothTransition(answerResult, 'none');
