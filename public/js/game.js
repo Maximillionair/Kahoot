@@ -178,6 +178,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             if (nextQuestionBtn) nextQuestionBtn.style.display = 'none';
+            
+            // Add return to menu button for host
+            const backToMenuBtn = document.createElement('button');
+            backToMenuBtn.id = 'back-to-menu-btn';
+            backToMenuBtn.className = 'btn primary';
+            backToMenuBtn.textContent = 'Go Back to Menu';
+            backToMenuBtn.addEventListener('click', () => {
+                window.location.href = '/quiz';
+            });
+            document.querySelector('.host-view').appendChild(backToMenuBtn);
         });
     }
     
@@ -258,16 +268,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update option click handler
         if (optionsGrid) {
             optionsGrid.addEventListener('click', function(e) {
-                if (e.target.classList.contains('option') && !hasAnswered) {
-                    const selectedOption = parseInt(e.target.dataset.option);
+                const option = e.target.closest('.option');
+                if (option && !hasAnswered && !option.disabled) {
+                    const selectedOption = parseInt(option.dataset.option);
                     const timeElapsed = Date.now() - startTime;
                     hasAnswered = true;
                     
                     // Add selection animation
-                    e.target.classList.add('selected');
-                    e.target.style.animation = 'pulse 0.3s ease';
+                    option.classList.add('selected');
+                    option.style.animation = 'pulse 0.3s ease';
                     
-                    if (typeof disableOptions === 'function') disableOptions();
+                    // Disable all options
+                    const allOptions = optionsGrid.querySelectorAll('.option');
+                    allOptions.forEach(opt => opt.disabled = true);
+                    
                     socket.emit('submit-answer', {
                         gameId: gameId,
                         answer: selectedOption,
