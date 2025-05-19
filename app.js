@@ -25,11 +25,11 @@ app.use(methodOverride('_method'));
 
 // Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'kahoot-clone-secret',
+  secret: process.env.SESSION_SECRET || 'goobie-hoot-secret',
   resave: true,
   saveUninitialized: true,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/kahoot-clone',
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/goobie-hoot',
     ttl: 24 * 60 * 60,
     autoRemove: 'native',
     touchAfter: 24 * 3600
@@ -75,7 +75,7 @@ app.use('/game', gameRoutes);
 
 // Home route
 app.get('/', (req, res) => {
-  res.render('index', { title: 'Kahoot Clone' });
+  res.render('index', { title: 'Goobie Hoot' });
 });
 
 // 404 route

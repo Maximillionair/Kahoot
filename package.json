@@ -1,7 +1,7 @@
 {
-    "name": "kahoot-clone",
+    "name": "goobie-hoot",
     "version": "1.0.0",
-    "description": "A Kahoot clone built with Node.js, Express, MongoDB and EJS",
+    "description": "A Goobie Hoot game built with Node.js, Express, MongoDB and EJS",
     "main": "server.js",
     "scripts": {
         "start": "node server.js",
