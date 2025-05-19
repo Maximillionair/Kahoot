@@ -35,22 +35,26 @@ io.on('connection', (socket) => {
       console.log('\n--- Create Game ---');
       console.log('Game ID:', gameId);
       console.log('Socket ID:', socket.id);
-      
       const game = await Game.findById(gameId).populate('quiz');
       if (!game) {
         console.log('Error: Game not found');
         return;
       }
-      
-      games[gameId] = {
-        host: socket.id,
-        players: {},
-        active: false,
-        pin: game.pin,
-        currentQuestion: 0,
-        answeredCount: 0
-      };
-      
+      // Only initialize if it doesn't exist
+      if (!games[gameId]) {
+        games[gameId] = {
+          host: socket.id,
+          players: {},
+          active: false,
+          pin: game.pin,
+          currentQuestion: 0,
+          answeredCount: 0
+        };
+      } else {
+        // Only update the host and pin if already exists
+        games[gameId].host = socket.id;
+        games[gameId].pin = game.pin;
+      }
       socket.join(gameId);
       console.log(`Host created game: ${gameId} with PIN: ${game.pin}`);
       console.log('Current game state:', games[gameId]);
@@ -67,16 +71,13 @@ io.on('connection', (socket) => {
       console.log('Username:', username);
       console.log('Socket ID:', socket.id);
       console.log('Player ID:', playerId);
-      
       const game = await Game.findById(gameId);
       if (!game) {
         console.log('Error: Game not found');
         return;
       }
-      
-      // Initialize game state if not exists
+      // Only initialize if it doesn't exist
       if (!games[gameId]) {
-        console.log('Initializing new game state');
         games[gameId] = {
           players: {},
           active: false,
@@ -85,7 +86,6 @@ io.on('connection', (socket) => {
           answeredCount: 0
         };
       }
-      
       // Add or update player by playerId
       games[gameId].players[playerId] = games[gameId].players[playerId] || {
         username,
@@ -94,14 +94,11 @@ io.on('connection', (socket) => {
       };
       games[gameId].players[playerId].socketId = socket.id;
       games[gameId].players[playerId].username = username; // update username in case it changed
-      
       socket.join(gameId);
-      
       // Notify host of new player
       io.to(gameId).emit('player-joined', {
         players: Object.values(games[gameId].players).map(p => p.username)
       });
-      
       console.log(`Player ${username} joined game: ${gameId}`);
       console.log('Current game state:', games[gameId]);
     } catch (error) {
