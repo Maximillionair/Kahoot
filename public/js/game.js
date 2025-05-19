@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         socket.on('new-question', function(data) {
-            console.log('Received new question:', data);
+            console.log('[EVENT] new-question:', data);
             smoothTransition(waitingScreen, 'none');
             smoothTransition(questionContainer, 'block');
             if (answerResult) answerResult.style.display = 'none';
@@ -241,6 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     option.dataset.option = index;
                 });
             }
+            console.log('[UI] Show questionContainer, hide leaderboard and answerResult');
             
             // Start timer
             let timeLeft = data.timeLimit;
@@ -274,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
             optionsGrid.addEventListener('click', function(e) {
                 const option = e.target.closest('.option');
                 if (!option) return;
-                console.log('Option clicked:', {
+                console.log('[UI] Option clicked:', {
                     option: option.dataset.option,
                     hasAnswered,
                     disabled: option.disabled
@@ -286,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     option.classList.add('selected');
                     option.style.animation = 'pulse 0.3s ease';
                     disableOptions();
-                    console.log('Submitting answer:', {
+                    console.log('[EMIT] submit-answer:', {
                         gameId,
                         answer: selectedOption,
                         time: timeElapsed,
@@ -312,9 +313,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         socket.on('answer-result', function(data) {
-            console.log('Received answer result:', data);
+            console.log('[EVENT] answer-result:', data);
             smoothTransition(questionContainer, 'none');
             smoothTransition(answerResult, 'block');
+            console.log('[UI] Show answerResult, hide questionContainer');
             if (resultIcon) {
                 resultIcon.innerHTML = data.correct ? '✅' : '❌';
                 resultIcon.style.animation = 'bounce 0.5s ease';
@@ -327,12 +329,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 pointsText.textContent = data.correct ? `+${data.points} points` : '0 points';
                 pointsText.style.animation = 'fadeIn 0.5s ease';
             }
-            // If results already arrived, show leaderboard after a delay
             if (pendingQuestionResults) {
+                console.log('[DELAY] Showing leaderboard after answerResult in 1.5s');
                 setTimeout(() => {
                     showLeaderboard(pendingQuestionResults);
                     pendingQuestionResults = null;
-                }, 1500); // 1.5 seconds
+                }, 1500);
             }
         });
         
@@ -359,19 +361,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Show leaderboard/results after each question, but only after player has answered
         socket.on('question-results', function(data) {
-            console.log('Received question-results:', data);
+            console.log('[EVENT] question-results:', data, 'hasAnswered:', hasAnswered);
             if (hasAnswered) {
-                // Show leaderboard after a delay if answer-result was just shown
+                console.log('[DELAY] Showing leaderboard after answerResult in 1.5s');
                 setTimeout(() => {
                     showLeaderboard(data);
                 }, 1500);
             } else {
-                // Store results to show after answer-result
+                console.log('[PENDING] Storing question-results to show after answerResult');
                 pendingQuestionResults = data;
             }
         });
 
         function showLeaderboard(data) {
+            console.log('[UI] Show leaderboard, hide questionContainer and answerResult');
             smoothTransition(questionContainer, 'none');
             smoothTransition(answerResult, 'none');
             smoothTransition(leaderboard, 'block');
