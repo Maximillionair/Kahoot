@@ -211,10 +211,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const gameOver = document.getElementById('game-over');
         const finalScore = document.getElementById('final-score');
         const finalRank = document.getElementById('final-rank');
+        const leaderboard = document.getElementById('leaderboard');
+        const scoresList = document.getElementById('scores-list');
         
         let hasAnswered = false;
         let startTime;
         let timerInterval;
+        let pendingQuestionResults = null; // Store results if received before answering
         
         socket.on('game-started', (data) => {
             window.location.href = `/game/play/${gameId}`;
@@ -225,17 +228,17 @@ document.addEventListener('DOMContentLoaded', () => {
             smoothTransition(waitingScreen, 'none');
             smoothTransition(questionContainer, 'block');
             if (answerResult) answerResult.style.display = 'none';
-            
+            if (leaderboard) leaderboard.style.display = 'none';
             hasAnswered = false;
+            pendingQuestionResults = null;
             if (questionText) questionText.textContent = data.question;
-            
-            // Enable all options with animation
             if (options) {
                 options.forEach((option, index) => {
                     option.textContent = data.options[index];
                     option.disabled = false;
                     option.classList.remove('selected', 'correct', 'incorrect');
                     option.style.animation = `fadeIn 0.3s ease ${index * 0.1}s`;
+                    option.dataset.option = index;
                 });
             }
             
@@ -270,33 +273,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (optionsGrid) {
             optionsGrid.addEventListener('click', function(e) {
                 const option = e.target.closest('.option');
-                if (!option) return; // Click was not on an option
-                
+                if (!option) return;
                 console.log('Option clicked:', {
                     option: option.dataset.option,
                     hasAnswered,
                     disabled: option.disabled
                 });
-                
                 if (!hasAnswered && !option.disabled) {
                     const selectedOption = parseInt(option.dataset.option);
                     const timeElapsed = Date.now() - startTime;
                     hasAnswered = true;
-                    
-                    // Add selection animation
                     option.classList.add('selected');
                     option.style.animation = 'pulse 0.3s ease';
-                    
-                    // Disable all options
                     disableOptions();
-                    
                     console.log('Submitting answer:', {
                         gameId,
                         answer: selectedOption,
-                        timeElapsed,
+                        time: timeElapsed,
                         playerId
                     });
-                    
                     socket.emit('submit-answer', {
                         gameId: gameId,
                         answer: selectedOption,
@@ -320,20 +315,24 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Received answer result:', data);
             smoothTransition(questionContainer, 'none');
             smoothTransition(answerResult, 'block');
-            
             if (resultIcon) {
                 resultIcon.innerHTML = data.correct ? '✅' : '❌';
                 resultIcon.style.animation = 'bounce 0.5s ease';
             }
-            
             if (resultText) {
                 resultText.textContent = data.correct ? 'Correct!' : 'Wrong!';
                 resultText.style.color = data.correct ? '#4CAF50' : '#f44336';
             }
-            
             if (pointsText) {
                 pointsText.textContent = data.correct ? `+${data.points} points` : '0 points';
                 pointsText.style.animation = 'fadeIn 0.5s ease';
+            }
+            // If results already arrived, show leaderboard after a delay
+            if (pendingQuestionResults) {
+                setTimeout(() => {
+                    showLeaderboard(pendingQuestionResults);
+                    pendingQuestionResults = null;
+                }, 1500); // 1.5 seconds
             }
         });
         
@@ -357,6 +356,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 finalRank.style.animation = 'fadeInDown 0.5s ease 0.2s';
             }
         });
+
+        // Show leaderboard/results after each question, but only after player has answered
+        socket.on('question-results', function(data) {
+            console.log('Received question-results:', data);
+            if (hasAnswered) {
+                // Show leaderboard after a delay if answer-result was just shown
+                setTimeout(() => {
+                    showLeaderboard(data);
+                }, 1500);
+            } else {
+                // Store results to show after answer-result
+                pendingQuestionResults = data;
+            }
+        });
+
+        function showLeaderboard(data) {
+            smoothTransition(questionContainer, 'none');
+            smoothTransition(answerResult, 'none');
+            smoothTransition(leaderboard, 'block');
+            if (scoresList) {
+                scoresList.innerHTML = '';
+                data.scores.forEach((player, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = `${player.username}: ${player.score} points`;
+                    li.style.animation = `fadeIn 0.3s ease ${index * 0.1}s`;
+                    scoresList.appendChild(li);
+                });
+            }
+        }
     }
     
     // --- COMMON HANDLERS ---

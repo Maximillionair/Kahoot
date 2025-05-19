@@ -219,23 +219,27 @@ io.on('connection', (socket) => {
     if (games[gameId] && games[gameId].players[playerId]) {
       const game = games[gameId];
       const player = game.players[playerId];
-      
       try {
         // Get quiz data from database
         const gameData = await Game.findById(gameId).populate('quiz');
         const currentQuestionIndex = game.currentQuestion - 1;
         const currentQuestion = gameData.quiz.questions[currentQuestionIndex];
-        
+        const timeLimit = currentQuestion.timeLimit || 20;
         let points = 0;
         let isCorrect = false;
-        
-        if (answer === currentQuestion.correctAnswer) {
-          // Calculate points based on time (faster = more points)
-          points = Math.max(1000 - Math.floor(time / 10), 500);
+        // Debug log for answer comparison
+        console.log('Player answer:', answer, typeof answer, 'Correct answer:', currentQuestion.correctAnswer, typeof currentQuestion.correctAnswer);
+        if (Number(answer) === Number(currentQuestion.correctAnswer)) {
+          // Kahoot-style points: 10,000 for <0.5s, rapidly decreasing to 500 minimum
+          const t = time / 1000; // ms to seconds
+          if (t <= 0.5) {
+            points = 10000;
+          } else {
+            points = Math.max(500, Math.round(10000 - ((t - 0.5) / (timeLimit - 0.5)) * (10000 - 500)));
+          }
           player.score += points;
           isCorrect = true;
         }
-        
         // Store player's answer
         player.answers.push({
           questionIndex: currentQuestionIndex,
@@ -243,23 +247,35 @@ io.on('connection', (socket) => {
           correct: isCorrect,
           time: time
         });
-        
         // Send result to player
         socket.emit('answer-result', {
           correct: isCorrect,
           points
         });
-        
         // Increment answered count
         game.answeredCount++;
-        
         // Inform host about player's answer
         io.to(game.host).emit('player-answered', {
           username: player.username,
           answeredCount: game.answeredCount,
           totalPlayers: Object.keys(game.players).length
         });
-        
+        // Track which players have answered for this question
+        game.answeredPlayers = game.answeredPlayers || {};
+        game.answeredPlayers[currentQuestionIndex] = game.answeredPlayers[currentQuestionIndex] || new Set();
+        game.answeredPlayers[currentQuestionIndex].add(playerId);
+        // If all players have answered, end question early and show results
+        if (game.answeredPlayers[currentQuestionIndex].size === Object.keys(game.players).length) {
+          // Send scores to all players (scoreboard)
+          const scores = Object.values(game.players).map(p => ({
+            username: p.username,
+            score: p.score
+          })).sort((a, b) => b.score - a.score);
+          io.to(gameId).emit('question-results', {
+            scores,
+            isLastQuestion: game.currentQuestion >= gameData.quiz.questions.length
+          });
+        }
         console.log(`${player.username} answered question in game: ${gameId}`);
       } catch (error) {
         console.error('Error processing answer:', error);
